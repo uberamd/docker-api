@@ -251,9 +251,24 @@ class Docker::Image
     def build(commands, opts = {}, connection = Docker.connection, &block)
       body = ""
       connection.post(
-        '/build', opts,
-        :body => Docker::Util.create_tar('Dockerfile' => commands),
-        :response_block => response_block(body, &block)
+          '/build', opts,
+          :body => Docker::Util.create_tar('Dockerfile' => commands),
+          :response_block => response_block(body, &block)
+      )
+      new(connection, 'id' => Docker::Util.extract_id(body))
+    rescue Docker::Error::ServerError
+      raise Docker::Error::UnexpectedResponseError
+    end
+
+    def build_from_remote_tar(remote_tar, opts = {}, connection = Docker.connection, creds = nil, &block)
+      headers = build_headers(creds)
+
+      body = ""
+      query = {:remote => remote_tar}
+      connection.post(
+          '/build', query, opts,
+          :headers => headers,
+          :response_block => response_block(body, &block)
       )
       new(connection, 'id' => Docker::Util.extract_id(body))
     rescue Docker::Error::ServerError
